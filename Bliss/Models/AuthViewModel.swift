@@ -10,6 +10,8 @@ final class AuthViewModel: ObservableObject {
     @Published var isSignUp = false
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var showPassword = false
+    @Published var showConfirmPassword = false
 
     private let sessionStore: SessionStore
 
@@ -21,6 +23,7 @@ final class AuthViewModel: ObservableObject {
         isSignUp.toggle()
         errorMessage = nil
         confirmPassword = ""
+        showConfirmPassword = false
     }
 
     func submit() {
@@ -68,5 +71,7 @@ final class AuthViewModel: ObservableObject {
         sessionStore.startSession(userId: userId)
         password = ""
         confirmPassword = ""
+        showPassword = false
+        showConfirmPassword = false
     }
 }
