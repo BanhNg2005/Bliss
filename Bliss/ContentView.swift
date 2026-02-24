@@ -19,7 +19,7 @@ struct ContentView: View {
 
     var body: some View {
         if sessionStore.isLoggedIn {
-            HomeView(sessionStore: sessionStore)
+            RootTabView(sessionStore: sessionStore)
         } else {
             AuthView(viewModel: authViewModel)
         }
