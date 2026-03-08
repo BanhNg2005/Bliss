@@ -12,5 +12,7 @@ struct FirestoreUser: Codable {
     let userId: String
     let username : String
     let avatarURL: String
-    let createdAt: Date 
+    let createdAt: Date
+    var isOnline: Bool
+    var lastSeen: Date
 }
