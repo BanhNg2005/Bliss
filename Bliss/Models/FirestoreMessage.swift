@@ -1,4 +1,10 @@
-// Models/FirestoreMessage.swift
+//
+//  FirestoreMessage.swift
+//  Bliss
+//
+//  Created by Cong Huy Kieu on 2026-03-07.
+//
+
 import Foundation
 
 struct FirestoreMessage: Codable, Identifiable {
