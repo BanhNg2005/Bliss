@@ -22,8 +22,10 @@ struct AuthTextField: View {
 
                 if isSecure && !showPassword {
                     SecureField(placeholder, text: $text)
+                        .textInputAutocapitalization(.never)
                 } else {
                     TextField(placeholder, text: $text)
+                        .textInputAutocapitalization(.never)
                 }
 
                 if isSecure {

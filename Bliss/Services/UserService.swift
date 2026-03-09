@@ -1,4 +1,11 @@
-// Services/UserService.swift
+//
+//  UserService.swift
+//  Bliss
+//
+//  Created by Cong Huy Kieu on 2026-03-07.
+//
+
+
 import FirebaseFirestore
 
 final class UserService {
@@ -18,13 +25,12 @@ final class UserService {
 
     func searchUsers(username: String) async throws -> [FirestoreUser] {
         let snapshot = try await db.collection("users")
-            .whereField("username", isGreaterThanOrEqualTo: username)
-            .whereField("username", isLessThanOrEqualTo: username + "\u{f8ff}")
-            .limit(to: 10)
             .getDocuments()
-        return snapshot.documents.compactMap {
-            try? $0.data(as: FirestoreUser.self)
-        }
+        
+        return snapshot.documents
+            .compactMap { try? $0.data(as: FirestoreUser.self) }
+            .filter { $0.username.lowercased().contains(username.lowercased()) }
+            .filter { $0.userId != "" }
     }
 
     func setOnlineStatus(userId: String, isOnline: Bool) {

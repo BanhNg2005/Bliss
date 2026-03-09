@@ -19,7 +19,7 @@ struct RootTabView: View {
                     Label("Home", systemImage: "house.fill")
                 }
 
-            DMView(currentUserId: sessionStore.userId)
+            DMView(sessionStore: sessionStore)
                 .tabItem {
                     Label("DM", systemImage: "paperplane.fill")
                 }

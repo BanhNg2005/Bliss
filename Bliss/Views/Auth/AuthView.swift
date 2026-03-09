@@ -56,7 +56,6 @@ struct AuthView: View {
                                 .stroke(Color.white.opacity(0.8), lineWidth: 1)
                         )
                         .cornerRadius(28)
-                        .ignoresSafeArea(edges: .bottom)
 
                         Button {
                             viewModel.isSignUp = true
@@ -107,11 +106,12 @@ struct AuthView: View {
 
             VStack(spacing: 14) {
                 AuthTextField(
-                    icon: "envelope",
-                    placeholder: "Email",
-                    text: $viewModel.email,
+                    icon: viewModel.isSignUp ? "envelope" : "person",
+                    placeholder: viewModel.isSignUp ? "Email" : "Email or Username",
+                    text: $viewModel.emailOrUsername,
                     showPassword: .constant(false)
                 )
+
                 if viewModel.isSignUp {
                     AuthTextField(
                         icon: "person",
