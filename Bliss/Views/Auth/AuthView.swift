@@ -112,6 +112,14 @@ struct AuthView: View {
                     text: $viewModel.email,
                     showPassword: .constant(false)
                 )
+                if viewModel.isSignUp {
+                    AuthTextField(
+                        icon: "person",
+                        placeholder: "Username",
+                        text: $viewModel.username,
+                        showPassword: .constant(false)
+                    )
+                }
 
                 AuthTextField(
                     icon: "lock",

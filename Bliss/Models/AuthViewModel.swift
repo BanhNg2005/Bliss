@@ -5,6 +5,7 @@ import Combine
 @MainActor
 final class AuthViewModel: ObservableObject {
     @Published var email = ""
+    @Published var username = ""
     @Published var password = ""
     @Published var confirmPassword = ""
     @Published var isSignUp = false
@@ -36,6 +37,10 @@ final class AuthViewModel: ObservableObject {
         }
 
         if isSignUp {
+            guard !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                   errorMessage = "Username is required."
+                   return
+               }
             guard password == confirmPassword else {
                 errorMessage = "Passwords do not match."
                 return
@@ -69,6 +74,16 @@ final class AuthViewModel: ObservableObject {
         }
 
         sessionStore.startSession(userId: userId)
+        let user = FirestoreUser(
+            userId: userId,
+            username: username.trimmingCharacters(in: .whitespacesAndNewlines),
+            avatarURL: "",
+            createdAt: Date()
+        )
+        Task{
+            try? await UserService().createUser(user)
+        }
+        username = ""
         password = ""
         confirmPassword = ""
         showPassword = false
