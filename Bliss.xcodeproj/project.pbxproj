@@ -46,9 +46,9 @@
 		28CB12AD2F36B26900C37E9F = {
 			isa = PBXGroup;
 			children = (
-				28CB12B82F36B26900C37E9F /* Bliss */,
 				283AADDB2F37ED700076CB04 /* Frameworks */,
 				28CB12B72F36B26900C37E9F /* Products */,
+				28CB12B82F36B26900C37E9F /* Bliss */,
 			);
 			sourceTree = "<group>";
 		};

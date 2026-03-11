@@ -1,53 +1,56 @@
+// Views/DM/ChatView.swift
 import SwiftUI
-import CoreData
 
 struct ChatView: View {
-    @Environment(\.managedObjectContext) private var viewContext
-    let conversation: Conversation
-    let currentUserId: String
-
-    @FetchRequest private var messages: FetchedResults<Message>
-
+    let conversation: FirestoreConversation
+    @ObservedObject var sessionStore: SessionStore
+    @StateObject private var service = ConversationService()
     @State private var messageText = ""
-    @State private var scrollProxy: ScrollViewProxy? = nil
-
-    private let accent = Color(red: 0.78, green: 0.09, blue: 0.2)
-
-    init(conversation: Conversation, currentUserId: String) {
-        self.conversation = conversation
-        self.currentUserId = currentUserId
-
-        _messages = FetchRequest(
-            sortDescriptors: [NSSortDescriptor(keyPath: \Message.timestamp, ascending: true)],
-            predicate: NSPredicate(format: "conversation == %@", conversation),
-            animation: .default
-        )
-    }
+    @State private var isSending = false
 
     var body: some View {
         VStack(spacing: 0) {
-            // Message list
+            // Online status bar
+            HStack {
+                Circle()
+                    .fill(conversation.isOtherOnline ? Color.green : Color.gray)
+                    .frame(width: 8, height: 8)
+                Text(conversation.isOtherOnline ? "Online" : "Offline")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity)
+            .background(Color(.systemGray6))
+
+            // Messages
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 8) {
-                        ForEach(messages) { message in
+                        ForEach(service.messages) { message in
                             MessageBubbleView(
                                 message: message,
-                                isFromCurrentUser: message.senderId == currentUserId
+                                isFromCurrentUser: message.senderId == sessionStore.userId
                             )
-                            .id(message.objectID)
+                            .id(message.id)
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
                 }
                 .onAppear {
-                    scrollProxy = proxy
-                    scrollToBottom(proxy: proxy, animated: false)
-                    markAsRead()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        if let last = service.messages.last {
+                            proxy.scrollTo(last.id, anchor: .bottom)
+                        }
+                    }
                 }
-                .onChange(of: messages.count) { _ in
-                    scrollToBottom(proxy: proxy, animated: true)
+                .onChange(of: service.messages.count) { _ in
+                    withAnimation {
+                        if let last = service.messages.last {
+                            proxy.scrollTo(last.id, anchor: .bottom)
+                        }
+                    }
                 }
             }
 
@@ -57,60 +60,49 @@ struct ChatView: View {
             HStack(spacing: 12) {
                 TextField("Message...", text: $messageText, axis: .vertical)
                     .lineLimit(1...4)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
                     .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 22))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
 
-                Button(action: sendMessage) {
+                Button {
+                    send()
+                } label: {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 32))
-                        .foregroundStyle(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.secondary : accent)
+                        .foregroundStyle(messageText.trimmingCharacters(in: .whitespaces).isEmpty ? .gray : .blue)
                 }
-                .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .animation(.easeInOut(duration: 0.15), value: messageText.isEmpty)
+                .disabled(messageText.trimmingCharacters(in: .whitespaces).isEmpty || isSending)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(Color(.systemBackground))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
         }
-        .navigationTitle(conversation.conversationId ?? "Chat")
+        .navigationTitle(conversation.otherUsername.isEmpty ? "Chat" : conversation.otherUsername)
         .navigationBarTitleDisplayMode(.inline)
-    }
-
-    private func sendMessage() {
-        let trimmed = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-
-        let message = Message(context: viewContext)
-        message.messageId = UUID().uuidString
-        message.senderId = currentUserId
-        message.text = trimmed
-        message.timestamp = Date()
-        message.status = false
-        message.conversation = conversation
-
-        conversation.lastMessageText = trimmed
-        conversation.lastMessageAt = Date()
-
-        messageText = ""
-
-        try? viewContext.save()
-    }
-
-    private func scrollToBottom(proxy: ScrollViewProxy, animated: Bool) {
-        guard let last = messages.last else { return }
-        if animated {
-            withAnimation {
-                proxy.scrollTo(last.objectID, anchor: .bottom)
-            }
-        } else {
-            proxy.scrollTo(last.objectID, anchor: .bottom)
+        .onAppear {
+            service.listenToMessages(in: conversation.conversationId)
+            service.markMessagesAsRead(
+                conversationId: conversation.conversationId,
+                currentUserId: sessionStore.userId
+            )
+        }
+        .onDisappear {
+            service.stopListeningToMessages()
         }
     }
 
-    private func markAsRead() {
-        conversation.unreadCount = 0
-        try? viewContext.save()
+    private func send() {
+        let text = messageText.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else { return }
+        isSending = true
+        messageText = ""
+        Task {
+            try? await service.sendMessage(
+                conversationId: conversation.conversationId,
+                senderId: sessionStore.userId,
+                text: text
+            )
+            isSending = false
+        }
     }
 }

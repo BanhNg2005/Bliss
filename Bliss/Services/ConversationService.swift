@@ -1,4 +1,10 @@
-// Services/ConversationService.swift
+//
+//  ConversationService.swift
+//  Bliss
+//
+//  Created by Cong Huy Kieu on 2026-03-07.
+//
+
 import FirebaseFirestore
 import FirebaseAuth
 import Combine
@@ -17,11 +23,36 @@ final class ConversationService: ObservableObject {
         conversationListener?.remove()
         conversationListener = db.collection("conversations")
             .whereField("participantIds", arrayContains: userId)
-            .order(by: "lastMessageAt", descending: true)
-            .addSnapshotListener { [weak self] snapshot, _ in
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self else { return }
+
+                if let error = error {
+                    print("Conversation listener error: \(error.localizedDescription)")
+                    return
+                }
+
+                print("\(snapshot?.documents.count ?? 0) conversations")
+                snapshot?.documents.forEach { print("  - \($0.documentID)") }
+
                 guard let docs = snapshot?.documents else { return }
-                self?.conversations = docs.compactMap {
-                    try? $0.data(as: FirestoreConversation.self)
+                let raw = docs.compactMap { try? $0.data(as: FirestoreConversation.self) }
+                print("\(raw.count) conversations")
+
+                Task {
+                    var enriched: [FirestoreConversation] = []
+                    for var conv in raw {
+                        let otherUserId = conv.participantIds.first { $0 != userId } ?? ""
+                        if let otherUser = try? await UserService().fetchUser(userId: otherUserId) {
+                            conv.otherUserId = otherUserId
+                            conv.otherUsername = otherUser.username
+                            conv.otherAvatarURL = otherUser.avatarURL
+                            conv.isOtherOnline = otherUser.isOnline
+                        }
+                        enriched.append(conv)
+                    }
+                    await MainActor.run {
+                        self.conversations = enriched.sorted { $0.lastMessageAt > $1.lastMessageAt }
+                    }
                 }
             }
     }
@@ -41,13 +72,12 @@ final class ConversationService: ObservableObject {
 
         // Create new
         let convId = UUID().uuidString
-        let conv = FirestoreConversation(
-            conversationId: convId,
-            participantIds: [currentUserId, otherUserId],
-            lastMessageText: "",
-            lastMessageAt: Date()
-        )
-        try db.collection("conversations").document(convId).setData(from: conv)
+        try await db.collection("conversations").document(convId).setData([
+            "conversationId": convId,
+            "participantIds": [currentUserId, otherUserId],
+            "lastMessageText": "",
+            "lastMessageAt": Date()
+        ])
         return convId
     }
 
@@ -62,7 +92,7 @@ final class ConversationService: ObservableObject {
         messageListener = db.collection("conversations")
             .document(conversationId)
             .collection("messages")
-            .order(by: "timestamp", ascending: true)
+            .order(by: "timestamp", descending: false)
             .addSnapshotListener { [weak self] snapshot, _ in
                 guard let docs = snapshot?.documents else { return }
                 self?.messages = docs.compactMap {
@@ -99,11 +129,13 @@ final class ConversationService: ObservableObject {
         db.collection("conversations")
             .document(conversationId)
             .collection("messages")
-            .whereField("isRead", isEqualTo: false)
-            .whereField("senderId", isNotEqualTo: currentUserId)
             .getDocuments { snapshot, _ in
-                snapshot?.documents.forEach {
-                    $0.reference.updateData(["isRead": true])
+                snapshot?.documents.forEach { doc in
+                    let senderId = doc.data()["senderId"] as? String ?? ""
+                    let isRead = doc.data()["isRead"] as? Bool ?? true
+                    if senderId != currentUserId && !isRead {
+                        doc.reference.updateData(["isRead": true])
+                    }
                 }
             }
     }

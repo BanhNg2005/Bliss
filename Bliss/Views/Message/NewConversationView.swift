@@ -1,90 +1,131 @@
+// Views/DM/NewConversationView.swift
 import SwiftUI
-import CoreData
 
 struct NewConversationView: View {
-    @Environment(\.managedObjectContext) private var viewContext
+    @ObservedObject var sessionStore: SessionStore
+    @ObservedObject var service: ConversationService
     @Environment(\.dismiss) private var dismiss
 
-    let currentUserId: String
-
-    @State private var recipientId = ""
+    @State private var searchText = ""
+    @State private var results: [FirestoreUser] = []
+    @State private var isSearching = false
     @State private var errorMessage: String?
-
-    private let accent = Color(red: 0.78, green: 0.09, blue: 0.2)
+    @State private var navigateToConversation: FirestoreConversation? = nil
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    HStack {
-                        Image(systemName: "person")
-                            .foregroundStyle(.secondary)
-                        TextField("Username or User ID", text: $recipientId)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
+            VStack(spacing: 0) {
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                    TextField("Search username...", text: $searchText)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .onSubmit { search() }
+                }
+                .padding(12)
+                .background(Color(.systemGray6))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .padding()
+
+                if isSearching {
+                    ProgressView()
+                        .padding()
+                } else if let error = errorMessage {
+                    Text(error)
+                        .foregroundStyle(.red)
+                        .font(.footnote)
+                        .padding()
+                } else {
+                    List(results) { user in
+                        Button {
+                            startConversation(with: user)
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "person.crop.circle.fill")
+                                    .font(.system(size: 36))
+                                    .foregroundStyle(.gray.opacity(0.4))
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(user.username)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.primary)
+
+                                    if user.isOnline {
+                                        Text("Online")
+                                            .font(.caption)
+                                            .foregroundStyle(.green)
+                                    } else {
+                                        Text("Last seen \(user.lastSeen, style: .relative) ago")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
                     }
-                } header: {
-                    Text("New Message")
-                } footer: {
-                    Text("Enter the user ID of the person you want to message.")
+                    .listStyle(.plain)
                 }
 
-                if let error = errorMessage {
-                    Section {
-                        Text(error)
-                            .foregroundStyle(.red)
-                            .font(.footnote)
-                    }
-                }
+                Spacer()
             }
             .navigationTitle("New Message")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Start") {
-                        startConversation()
-                    }
-                    .disabled(recipientId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    Button("Search") { search() }
+                        .disabled(searchText.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
+            }
+            .navigationDestination(item: $navigateToConversation) { conversation in
+                ChatView(conversation: conversation, sessionStore: sessionStore)
             }
         }
     }
 
-    private func startConversation() {
-        let trimmed = recipientId.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !trimmed.isEmpty else {
-            errorMessage = "Please enter a user ID."
-            return
+    private func search() {
+        isSearching = true
+        errorMessage = nil
+        Task {
+            do {
+                let found = try await UserService().searchUsers(username: searchText.trimmingCharacters(in: .whitespaces))
+                results = found.filter { $0.userId != sessionStore.userId }
+                if results.isEmpty { errorMessage = "No users found." }
+            } catch {
+                errorMessage = "Search failed. Try again."
+            }
+            isSearching = false
         }
+    }
 
-        guard trimmed != currentUserId else {
-            errorMessage = "You can't message yourself."
-            return
+    private func startConversation(with user: FirestoreUser) {
+        Task {
+            do {
+                let convId = try await service.createConversation(
+                    between: sessionStore.userId,
+                    and: user.userId
+                )
+                let conversation = FirestoreConversation(
+                    conversationId: convId,
+                    participantIds: [sessionStore.userId, user.userId],
+                    lastMessageText: "",
+                    lastMessageAt: Date(),
+                    otherUsername: user.username,
+                    otherUserId: user.userId,
+                    otherAvatarURL: user.avatarURL,
+                    isOtherOnline: user.isOnline
+                )
+                await MainActor.run {
+                    navigateToConversation = conversation
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Could not start conversation."
+                }
+            }
         }
-
-        // Check if conversation already exists
-        let request: NSFetchRequest<Conversation> = Conversation.fetchRequest()
-        request.predicate = NSPredicate(format: "conversationId == %@", trimmed)
-        request.fetchLimit = 1
-
-        if let existing = try? viewContext.fetch(request), !existing.isEmpty {
-            // Conversation already exists, just dismiss
-            dismiss()
-            return
-        }
-
-        // Create new conversation
-        let conversation = Conversation(context: viewContext)
-        conversation.conversationId = trimmed
-        conversation.lastMessageAt = Date()
-        conversation.lastMessageText = ""
-        conversation.unreadCount = 0
-
-        try? viewContext.save()
-        dismiss()
     }
 }

@@ -1,36 +1,39 @@
+// Views/DM/DMView.swift
 import SwiftUI
-import CoreData
 
 struct DMView: View {
-    @Environment(\.managedObjectContext) private var viewContext
-    let currentUserId: String
-
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Conversation.lastMessageAt, ascending: false)],
-        animation: .default
-    )
-    private var conversations: FetchedResults<Conversation>
-
-    @State private var showNewMessage = false
+    @ObservedObject var sessionStore: SessionStore
+    @StateObject private var service = ConversationService()
+    @State private var showNewConversation = false
 
     var body: some View {
         NavigationStack {
             Group {
-                if conversations.isEmpty {
-                    emptyState
+                if service.conversations.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "bubble.left.and.bubble.right")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.secondary)
+                        Text("No messages yet")
+                            .font(.title3.bold())
+                        Text("Start a conversation by tapping +")
+                            .foregroundStyle(.secondary)
+                            .font(.footnote)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    List {
-                        ForEach(conversations) { conversation in
-                            NavigationLink(destination:
-                                ChatView(conversation: conversation, currentUserId: currentUserId)
-                                    .environment(\.managedObjectContext, viewContext)
-                            ) {
-                                ConversationRowView(conversation: conversation)
-                            }
-                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                            .listRowBackground(Color.clear)
+                    List(service.conversations) { conversation in
+                        NavigationLink {
+                            ChatView(
+                                conversation: conversation,
+                                sessionStore: sessionStore
+                            )
+                        } label: {
+                            ConversationRowView(
+                                conversation: conversation,
+                                currentUserId: sessionStore.userId
+                            )
                         }
-                        .onDelete(perform: deleteConversations)
                     }
                     .listStyle(.plain)
                 }
@@ -39,41 +42,23 @@ struct DMView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        showNewMessage = true
+                        showNewConversation = true
                     } label: {
-                        Image(systemName: "square.and.pencil")
+                        Image(systemName: "plus.circle.fill")
                     }
                 }
             }
-            .sheet(isPresented: $showNewMessage) {
-                NewConversationView(currentUserId: currentUserId)
-                    .environment(\.managedObjectContext, viewContext)
+            .sheet(isPresented: $showNewConversation) {
+                NewConversationView(sessionStore: sessionStore, service: service)
+            }
+            .onAppear {
+                service.listenToConversations(for: sessionStore.userId)
+                UserService().setOnlineStatus(userId: sessionStore.userId, isOnline: true)
+            }
+            .onDisappear {
+                service.stopListeningToConversations()
+                UserService().setOnlineStatus(userId: sessionStore.userId, isOnline: false)
             }
         }
-    }
-
-    private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "bubble.left.and.bubble.right")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-
-            Text("No Messages Yet")
-                .font(.title3.bold())
-
-            Text("Start a conversation by tapping the compose button above.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private func deleteConversations(at offsets: IndexSet) {
-        for index in offsets {
-            viewContext.delete(conversations[index])
-        }
-        try? viewContext.save()
     }
 }

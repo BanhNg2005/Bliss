@@ -1,67 +1,41 @@
+// Views/DM/ConversationRowView.swift
 import SwiftUI
-import CoreData
 
 struct ConversationRowView: View {
-    let conversation: Conversation
+    let conversation: FirestoreConversation
+    let currentUserId: String
 
     var body: some View {
         HStack(spacing: 12) {
-            // Avatar placeholder
-            ZStack {
-                Circle()
-                    .fill(avatarColor)
-                    .frame(width: 50, height: 50)
+            ZStack(alignment: .bottomTrailing) {
+                Image(systemName: "person.crop.circle.fill")
+                    .font(.system(size: 44))
+                    .foregroundStyle(.gray.opacity(0.4))
 
-                Text(avatarInitial)
-                    .font(.headline.bold())
-                    .foregroundStyle(.white)
+                if conversation.isOtherOnline {
+                    Circle()
+                        .fill(.green)
+                        .frame(width: 12, height: 12)
+                        .overlay(Circle().stroke(Color(.systemBackground), lineWidth: 2))
+                }
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(conversation.conversationId ?? "Unknown")
-                        .font(.subheadline.bold())
-                        .lineLimit(1)
+                Text(conversation.otherUsername.isEmpty ? "User" : conversation.otherUsername)
+                    .font(.subheadline.weight(.semibold))
 
-                    Spacer()
-
-                    if let date = conversation.lastMessageAt {
-                        Text(date, style: .relative)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                HStack {
-                    Text(conversation.lastMessageText ?? "No messages yet")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-
-                    Spacer()
-
-                    if conversation.unreadCount > 0 {
-                        Text("\(conversation.unreadCount)")
-                            .font(.caption2.bold())
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color(red: 0.78, green: 0.09, blue: 0.2))
-                            .clipShape(Capsule())
-                    }
-                }
+                Text(conversation.lastMessageText.isEmpty ? "No messages yet" : conversation.lastMessageText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
+
+            Spacer()
+
+            Text(conversation.lastMessageAt, style: .time)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
-    }
-
-    private var avatarInitial: String {
-        String((conversation.conversationId ?? "?").prefix(1)).uppercased()
-    }
-
-    private var avatarColor: Color {
-        let colors: [Color] = [.blue, .purple, .orange, .green, .pink, .teal, .indigo]
-        let index = abs((conversation.conversationId ?? "").hashValue) % colors.count
-        return colors[index]
     }
 }

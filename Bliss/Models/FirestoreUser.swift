@@ -8,9 +8,11 @@
 
 import Foundation
 
-struct FirestoreUser: Codable {
+struct FirestoreUser: Codable, Identifiable {
+    var id: String { userId }
     let userId: String
     let username : String
+    let email: String  
     let avatarURL: String
     let createdAt: Date
     var isOnline: Bool
