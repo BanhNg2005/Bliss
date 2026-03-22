@@ -1,16 +1,20 @@
 // Views/DM/ChatView.swift
 import SwiftUI
+import CallKit
 
 struct ChatView: View {
     let conversation: FirestoreConversation
     @ObservedObject var sessionStore: SessionStore
     @StateObject private var service = ConversationService()
+    @State private var callObserver = CXCallObserver()
     @State private var messageText = ""
     @State private var isSending = false
+    
+    
 
     var body: some View {
         VStack(spacing: 0) {
-            // Online status bar
+            // Online status bar and call
             HStack {
                 Circle()
                     .fill(conversation.isOtherOnline ? Color.green : Color.gray)
@@ -22,6 +26,7 @@ struct ChatView: View {
             .padding(.vertical, 6)
             .frame(maxWidth: .infinity)
             .background(Color(.systemGray6))
+            
 
             // Messages
             ScrollViewReader { proxy in
