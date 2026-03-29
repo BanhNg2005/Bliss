@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		225577CC2F78A31500F5F620 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 225577CB2F78A31500F5F620 /* FirebaseStorage */; };
 		283AADDD2F37ED700076CB04 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 283AADDC2F37ED700076CB04 /* FirebaseAuth */; };
 		283AADDF2F37ED7A0076CB04 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 283AADDE2F37ED7A0076CB04 /* FirebaseFirestore */; };
 /* End PBXBuildFile section */
@@ -30,6 +31,7 @@
 			files = (
 				283AADDD2F37ED700076CB04 /* FirebaseAuth in Frameworks */,
 				283AADDF2F37ED7A0076CB04 /* FirebaseFirestore in Frameworks */,
+				225577CC2F78A31500F5F620 /* FirebaseStorage in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -82,6 +84,7 @@
 			packageProductDependencies = (
 				283AADDC2F37ED700076CB04 /* FirebaseAuth */,
 				283AADDE2F37ED7A0076CB04 /* FirebaseFirestore */,
+				225577CB2F78A31500F5F620 /* FirebaseStorage */,
 			);
 			productName = Bliss;
 			productReference = 28CB12B62F36B26900C37E9F /* Bliss.app */;
@@ -365,6 +368,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		225577CB2F78A31500F5F620 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 28EEC5AC2F37E80800CA5DAD /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
 		283AADDC2F37ED700076CB04 /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 28EEC5AC2F37E80800CA5DAD /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;

@@ -81,7 +81,7 @@ struct NewConversationView: View {
                 }
             }
             .navigationDestination(item: $navigateToConversation) { conversation in
-                ChatView(conversation: conversation, sessionStore: sessionStore)
+                ChatView(conversation: conversation, sessionStore: sessionStore, callService: CallService.shared)
             }
         }
     }
