@@ -122,7 +122,15 @@ final class AuthViewModel: ObservableObject {
             }
         }
 
-        sessionStore.startSession(userId: userId)
+        sessionStore.startSession(with: FirestoreUser(
+            userId: userId,
+            username: username.trimmingCharacters(in: .whitespacesAndNewlines),
+            email: emailOrUsername.trimmingCharacters(in: .whitespacesAndNewlines),
+            avatarURL: "",
+            createdAt: Date(),
+            isOnline: true,
+            lastSeen: Date()
+        ))
         emailOrUsername = ""
         username = ""
         password = ""
