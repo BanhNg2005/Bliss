@@ -8,8 +8,11 @@
 import SwiftUI
 
 struct ConnectFour: View {
+    @StateObject private var viewModel = BoardViewModel(board: Board(cols: config.columns, rows: config.rows), tilesToWin: config.tilesToWin)
+    
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        RootView()
+            .environmentObject(viewModel)
     }
 }
 

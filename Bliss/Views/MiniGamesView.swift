@@ -18,6 +18,9 @@ struct MiniGamesView: View {
                 NavigationLink(destination: TicTacToe()) {
                     Text("Tic Tac Toe")
                 }
+                NavigationLink(destination: ConnectFour()) {
+                    Text("Connect 4")
+                }
                 .listRowInsets(EdgeInsets())
                 .padding(.vertical, 8)
             }

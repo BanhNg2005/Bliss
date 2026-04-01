@@ -36,17 +36,10 @@ struct Board {
         self.cols = cols
         self.rows = rows
         
-//        for column in 0..<columns {
-//            var c = [Tile]()
-//            for row in 0..<rows {
-//                c.append(Tile(column: column, row: row, state: .vacant))
-//            }
-//            tiles.append(c)
-//        }
         for col in 0..<cols {
             var column = [Tile]()
             for row in 0..<rows {
-                column.append(Tile(col: col, row: row, state: .vacant))
+                column.append(Tile(col: col, row: row, state: .vacant, id: UUID()))
             }
             tiles.append(column)
         }
@@ -69,47 +62,38 @@ struct Board {
     }
     
     func tilesFor(diagnol: Diagnol, at col: Int, row: Int) -> [Tile] {
-        let tile = tiles[col][row]
-        let highTiles = adjacentDiagnols(column: col, row: row, colIncrement: diagnol.highSlope.0, rowIncrement: diagnol.highSlope.1) ?? [Tile]()
-        let lowTiles = adjacentDiagnols(column: col, row: row, colIncrement: diagnol.lowSlope.0, rowIncrement: diagnol.lowSlope.1) ?? [Tile]()
-        return lowTiles + [tile] + highTiles
+        var result = [Tile]()
+        let slope = diagnol.highSlope
+        
+        var startCol = col
+        var startRow = row
+        while startCol - slope.0 >= 0, startCol - slope.0 < cols, startRow - slope.1 >= 0, startRow - slope.1 < rows {
+            startCol -= slope.0
+            startRow -= slope.1
+        }
+        
+        var currCol = startCol
+        var currRow = startRow
+        while currCol >= 0, currCol < cols, currRow >= 0, currRow < rows {
+            result.append(tiles[currCol][currRow])
+            currCol += slope.0
+            currRow += slope.1
+        }
+        return result
     }
     
     /// Add a tile to the board for column index. Will optionally return the new tile if the column is not full
-        /// - Parameter column: The column index for dropped tile
+        /// - Parameter col: The column index for dropped tile
         /// - Parameter state: The state of the new tile
         @discardableResult
-        mutating func addTile(inColumn column: Int, forState state: TileState) -> Tile? {
-            if let emptyRow = tilesFor(column: column).filter({ $0.state == .vacant}).first?.row {
-                let tile = Tile(column: column, row: emptyRow, state: state)
-                tiles[column][emptyRow] = tile
+        mutating func addTile(inColumn col: Int, forState state: TileState) -> Tile? {
+            if let emptyRow = tilesFor(column: col).filter({ $0.state == .vacant}).first?.row {
+                let tile = Tile(col: col, row: emptyRow, state: state, id: UUID())
+                tiles[col][emptyRow] = tile
                 return tile
             }
             return nil
         }
     
 
-}
-
-extension Board {
-    /// Optionally returns three successive tiles from any coordinate in any slope direction. If adjacent coordinate is out of bounds nil is returned
-    /// - Parameter column: The column index for the tile
-    /// - Parameter row: The row index for the tile
-    /// - Parameter colIncrement: The y slope of the diagnol
-    /// - Parameter rowIncrement: The x slope of the diagnol
-    private func adjacentDiagnols(column: Int, row: Int, colIncrement: Int, rowIncrement: Int) -> [Tile]? {
-        guard
-            row + (rowIncrement * (rows / 2)) >= 0,
-            row + (rowIncrement * (rows / 2)) < tiles[0].count,
-            column + (colIncrement * (cols / 2)) >= 0,
-            column + (colIncrement * (cols / 2)) < tiles.count
-        else {
-            return nil
-        }
-        return [
-            tiles[column + colIncrement][row + rowIncrement],
-            tiles[column + (colIncrement * 2)][row + (rowIncrement * 2)],
-            tiles[column + (colIncrement * 3)][row + (rowIncrement * 3)]
-        ]
-    }
 }

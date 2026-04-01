@@ -11,5 +11,5 @@ struct Tile: Identifiable {
     let col: Int
     let row: Int
     var state: TileState
-    var id: UUID()
+    var id = UUID()
 }
