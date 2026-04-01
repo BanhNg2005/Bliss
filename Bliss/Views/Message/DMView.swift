@@ -4,6 +4,7 @@ import SwiftUI
 struct DMView: View {
     @ObservedObject var sessionStore: SessionStore
     @StateObject private var service = ConversationService()
+    @StateObject private var callService = CallService.shared
     @State private var showNewConversation = false
 
     var body: some View {
@@ -26,7 +27,8 @@ struct DMView: View {
                         NavigationLink {
                             ChatView(
                                 conversation: conversation,
-                                sessionStore: sessionStore
+                                sessionStore: sessionStore,
+                                callService:  CallService.shared 
                             )
                         } label: {
                             ConversationRowView(
@@ -54,6 +56,7 @@ struct DMView: View {
             .onAppear {
                 service.listenToConversations(for: sessionStore.userId)
                 UserService().setOnlineStatus(userId: sessionStore.userId, isOnline: true)
+                CallService.shared.listenForIncomingCalls(userId: sessionStore.userId)
             }
             .onDisappear {
                 service.stopListeningToConversations()

@@ -5,16 +5,17 @@ import CallKit
 struct ChatView: View {
     let conversation: FirestoreConversation
     @ObservedObject var sessionStore: SessionStore
+    @ObservedObject var callService: CallService
     @StateObject private var service = ConversationService()
-    @State private var callObserver = CXCallObserver()
     @State private var messageText = ""
     @State private var isSending = false
-    
-    
 
     var body: some View {
         VStack(spacing: 0) {
-            // Online status bar and call
+            ActiveCallBannerView(callService: callService)
+                .padding(.top, 4)
+
+            // Online status bar
             HStack {
                 Circle()
                     .fill(conversation.isOtherOnline ? Color.green : Color.gray)
@@ -26,7 +27,6 @@ struct ChatView: View {
             .padding(.vertical, 6)
             .frame(maxWidth: .infinity)
             .background(Color(.systemGray6))
-            
 
             // Messages
             ScrollViewReader { proxy in
@@ -84,6 +84,16 @@ struct ChatView: View {
         }
         .navigationTitle(conversation.otherUsername.isEmpty ? "Chat" : conversation.otherUsername)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // ← ADD THIS: phone button in the top-right
+            ToolbarItem(placement: .topBarTrailing) {
+                CallButton(
+                    conversation: conversation,
+                    currentUserId: sessionStore.userId,
+                    callService: callService
+                )
+            }
+        }
         .onAppear {
             service.listenToMessages(in: conversation.conversationId)
             service.markMessagesAsRead(

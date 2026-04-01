@@ -36,7 +36,7 @@ final class CallService: NSObject, ObservableObject {
     private let provider: CXProvider
     private let callController = CXCallController()
     private var callListener: ListenerRegistration?
-    private var activeCallId: UUID?
+    private(set) var activeCallId: UUID?
 
     private override init() {
         let config = CXProviderConfiguration()
