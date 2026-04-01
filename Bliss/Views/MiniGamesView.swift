@@ -7,8 +7,23 @@ struct MiniGamesView: View {
                 .font(.system(size: 36))
             Text("Mini Games")
                 .font(.title2.weight(.semibold))
-            Text("Coming soon.")
-                .foregroundStyle(.secondary)
+            // put a list of games here, have a AirHockey already
+            List {
+                NavigationLink(destination: AirHockey()) {
+                    Text("Air Hockey")
+                }
+                NavigationLink(destination: SpaceInvader()) {
+                    Text("Space Invader")
+                }
+                NavigationLink(destination: TicTacToe()) {
+                    Text("Tic Tac Toe")
+                }
+                NavigationLink(destination: ConnectFour()) {
+                    Text("Connect 4")
+                }
+                .listRowInsets(EdgeInsets())
+                .padding(.vertical, 8)
+            }
         }
         .padding(24)
         .navigationTitle("Mini Games")

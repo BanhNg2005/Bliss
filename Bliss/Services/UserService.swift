@@ -34,6 +34,15 @@ final class UserService {
     }
 
     func setOnlineStatus(userId: String, isOnline: Bool) {
+        guard !userId.isEmpty else { return }
+        db.collection("users").document(userId).updateData([
+            "isOnline": isOnline,
+            "lastSeen": Date()
+        ])
+    }
+    
+    func updateUserOnlineStatus(userId: String, isOnline: Bool) {
+        guard !userId.isEmpty else { return }
         db.collection("users").document(userId).updateData([
             "isOnline": isOnline,
             "lastSeen": Date()

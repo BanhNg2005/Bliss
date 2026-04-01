@@ -55,7 +55,7 @@ struct ProfileView: View {
                     endPoint: .bottomTrailing
                 ))
 
-            Text(sessionStore.userId.isEmpty ? "You" : sessionStore.userId)
+            Text(sessionStore.username.isEmpty ? "You" : sessionStore.username)
                 .font(.title2.weight(.semibold))
 
             HStack(spacing: 24) {
