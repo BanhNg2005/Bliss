@@ -1,5 +1,6 @@
 import SwiftUI
 import FirebaseFirestore
+import CoreData
 
 struct UserProfileView: View {
     let userId: String
@@ -12,8 +13,18 @@ struct UserProfileView: View {
     @State private var isLoadingUser = true
     @State private var isFollowLoading = false
 
-    private var theirPosts: [FirestorePost] {
-        postService.posts.filter { $0.authorId == userId }
+    @FetchRequest private var theirPosts: FetchedResults<Post>
+
+    init(userId: String, currentUserId: String) {
+        self.userId = userId
+        self.currentUserId = currentUserId
+
+        let predicate = NSPredicate(format: "authorId == %@", userId)
+        _theirPosts = FetchRequest(
+            sortDescriptors: [NSSortDescriptor(keyPath: \Post.createdAt, ascending: false)],
+            predicate: predicate,
+            animation: .default
+        )
     }
 
     private var isFollowing: Bool {
@@ -106,7 +117,7 @@ struct UserProfileView: View {
             HStack(spacing: 8) {
                 if isFollowLoading {
                     ProgressView()
-                        .tint(isFollowing ? .primary : .white)
+                        .tint(isFollowing ? Color.primary : Color.white)
                 }
                 Text(isFollowing ? "Following" : "Follow")
                     .fontWeight(.semibold)
@@ -115,7 +126,7 @@ struct UserProfileView: View {
             }
         }
         .background(isFollowing ? Color(.systemGray5) : Color.blue)
-        .foregroundStyle(isFollowing ? .primary : .white)
+        .foregroundStyle(isFollowing ? Color.primary : Color.white)
         .clipShape(Capsule())
         .disabled(isFollowLoading)
         .animation(.easeInOut(duration: 0.2), value: isFollowing)
@@ -136,11 +147,7 @@ struct UserProfileView: View {
         } else {
             LazyVStack(spacing: 20) {
                 ForEach(theirPosts) { post in
-                    PostCardView(
-                        post: post,
-                        currentUserId: currentUserId,
-                        postService: postService
-                    )
+                    PostCardView(post: post)
                 }
             }
             .padding(.horizontal, 16)
