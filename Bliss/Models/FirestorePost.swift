@@ -16,3 +16,18 @@ struct FirestorePost: Codable, Identifiable {
         MediaType(rawValue: mediaType) ?? .image
     }
 }
+
+extension FirestorePost {
+    init(from post: Post) {
+        self.postId = post.wrappedPostId
+        self.authorId = post.wrappedAuthorId
+        self.caption = post.wrappedCaption
+        self.mediaURL = post.wrappedMediaURL
+        self.mediaType = post.mediaType
+        self.likeCount = Int(post.likeCount)
+        // Core Data might not store full likedBy array, so assume empty if not stored,
+        // or just use what we have to satisfy the basic struct shape
+        self.likedBy = []
+        self.createdAt = post.createdAt ?? Date()
+    }
+}
