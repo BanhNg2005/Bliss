@@ -6,16 +6,11 @@ struct DMView: View {
     @StateObject private var service = ConversationService()
     @StateObject private var callService = CallService.shared
     @State private var showNewConversation = false
-    @AppStorage("interestedSellerIds") private var interestedSellersData: Data = Data()
-    
-    var interestedSellers: [String] {
-        (try? JSONDecoder().decode([String].self, from: interestedSellersData)) ?? []
-    }
 
     var body: some View {
         NavigationStack {
             Group {
-                if service.conversations.isEmpty && interestedSellers.isEmpty {
+                if service.conversations.isEmpty {
                     VStack(spacing: 12) {
                         Image(systemName: "bubble.left.and.bubble.right")
                             .font(.system(size: 48))
@@ -29,23 +24,6 @@ struct DMView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List {
-                        if !interestedSellers.isEmpty {
-                            Section(header: Text("Marketplace Interests")) {
-                                ForEach(interestedSellers, id: \.self) { sellerId in
-                                    HStack {
-                                        Text("Interested in seller: \(sellerId)")
-                                            .font(.subheadline)
-                                        Spacer()
-                                        Button("Message") {
-                                            // Implement message flow to sellerId
-                                            showNewConversation = true
-                                        }
-                                        .buttonStyle(.borderedProminent)
-                                    }
-                                }
-                            }
-                        }
-                        
                         Section(header: Text("Chats")) {
                             ForEach(service.conversations) { conversation in
                                 NavigationLink {
