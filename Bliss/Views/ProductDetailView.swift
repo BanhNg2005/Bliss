@@ -5,11 +5,11 @@ import MapKit
 struct ProductDetailView: View {
     let product: FirestoreProduct
     let userLocation: CLLocation
+    @ObservedObject var sessionStore: SessionStore
     @Environment(\.dismiss) var dismiss
     
-    // For storing interested sellers locally
-    @AppStorage("interestedSellerIds") private var interestedSellersData: Data = Data()
     @State private var showMessageAlert = false
+    @State private var sellerUsername: String = ""
     
     var region: MKCoordinateRegion {
         MKCoordinateRegion(
@@ -33,6 +33,12 @@ struct ProductDetailView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(product.title)
                         .font(.title2.bold())
+                        
+                    if !sellerUsername.isEmpty {
+                        Text("Listed by \(sellerUsername)")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
                     
                     Text("$\(product.price, specifier: "%.2f")")
                         .font(.title.bold())
@@ -64,8 +70,7 @@ struct ProductDetailView: View {
                         .foregroundColor(.secondary)
                     
                     Button {
-                        markInterest()
-                        showMessageAlert = true
+                        sendMessageToSeller()
                     } label: {
                         Text("Message Seller")
                             .font(.headline)
@@ -79,7 +84,7 @@ struct ProductDetailView: View {
                     .alert("Message Sent", isPresented: $showMessageAlert) {
                         Button("OK", role: .cancel) { dismiss() }
                     } message: {
-                        Text("The seller has been added to your interested list in DMs.")
+                        Text("An automated message has been sent to the seller.")
                     }
                 }
                 .padding()
@@ -87,14 +92,37 @@ struct ProductDetailView: View {
         }
         .navigationTitle("Details")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            fetchSeller()
+        }
     }
     
-    private func markInterest() {
-        var ids = (try? JSONDecoder().decode([String].self, from: interestedSellersData)) ?? []
-        if !ids.contains(product.sellerId) {
-            ids.append(product.sellerId)
-            if let d = try? JSONEncoder().encode(ids) {
-                interestedSellersData = d
+    private func fetchSeller() {
+        Task {
+            do {
+                let user = try await UserService().fetchUser(userId: product.sellerId)
+                await MainActor.run {
+                    self.sellerUsername = user.username
+                }
+            } catch {
+                print("Failed to fetch seller: \(error)")
+            }
+        }
+    }
+    
+    private func sendMessageToSeller() {
+        Task {
+            do {
+                let convService = ConversationService()
+                let convId = try await convService.createConversation(between: sessionStore.userId, and: product.sellerId)
+                let text = "I am interested in \(product.title). Is this still available?"
+                try await convService.sendMessage(conversationId: convId, senderId: sessionStore.userId, text: text)
+                
+                await MainActor.run {
+                    showMessageAlert = true
+                }
+            } catch {
+                print("Error sending message: \(error)")
             }
         }
     }
