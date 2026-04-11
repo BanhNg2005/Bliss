@@ -36,21 +36,23 @@ struct HomeView: View {
             }
             .navigationTitle("Bliss")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 16) {
-                        Button {
-                            showCreatePost = true
-                        } label: {
-                            Image(systemName: "plus.circle.fill")
-                        }
-
-                        Button {
-                            sessionStore.endSession()
-                        } label: {
-                            Image(systemName: "rectangle.portrait.and.arrow.right")
-                        }
-                        .accessibilityLabel("Sign Out")
+                // This places the button on the far left
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showCreatePost = true
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
                     }
+                }
+
+                // This places the button on the far right
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        sessionStore.endSession()
+                    } label: {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                    }
+                    .accessibilityLabel("Sign Out")
                 }
             }
             .sheet(isPresented: $showCreatePost) {
