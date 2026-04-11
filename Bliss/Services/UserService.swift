@@ -18,7 +18,11 @@ final class UserService {
     }
 
     func fetchUser(userId: String) async throws -> FirestoreUser {
-        try await db.collection("users")
+        guard !userId.isEmpty else {
+            throw NSError(domain: "UserService", code: 400, userInfo: [NSLocalizedDescriptionKey: "User ID cannot be empty"])
+        }
+        
+        return try await db.collection("users")
             .document(userId)
             .getDocument(as: FirestoreUser.self)
     }
