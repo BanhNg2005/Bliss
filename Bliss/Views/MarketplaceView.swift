@@ -3,7 +3,9 @@ import CoreLocation
 
 struct MarketplaceView: View {
     @Environment(\.dismiss) var dismiss
+    @ObservedObject var sessionStore: SessionStore
     @StateObject private var service = MarketplaceService()
+    @StateObject private var locationManager = MarketplaceLocationManager()
     
     @State private var searchText = ""
     @State private var sortType: SortType = .newest
@@ -74,7 +76,7 @@ struct MarketplaceView: View {
                 LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(filteredProducts) { product in
                         NavigationLink {
-                            ProductDetailView(product: product, userLocation: userLocation)
+                            ProductDetailView(product: product, userLocation: userLocation, sessionStore: sessionStore)
                         } label: {
                             ProductCard(product: product, userLocation: userLocation)
                         }
@@ -149,6 +151,6 @@ struct ProductCard: View {
 
 #Preview {
     NavigationStack {
-        MarketplaceView()
+        MarketplaceView(sessionStore: SessionStore())
     }
 }
