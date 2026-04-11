@@ -16,7 +16,14 @@ class MarketplaceService: ObservableObject {
         }
     }
     
-    func createProduct(title: String, description: String, price: Double, condition: String, locationName: String, lat: Double, lon: Double, sellerId: String) async throws {
+    // Updated to accept postalCode and optionally base64 image data
+    func createProduct(title: String, description: String, price: Double, condition: String, locationName: String, postalCode: String, lat: Double, lon: Double, sellerId: String, imageData: Data?) async throws {
+        
+        // Convert local image data to base64 if available, otherwise use placeholder fallback
+        // Firestore has a 1MB limit so the data must be highly compressed
+        let base64String = imageData?.base64EncodedString()
+        let finalImageURL = base64String != nil ? "data:image/jpeg;base64,\(base64String!)" : "https://via.placeholder.com/300"
+
         let product = FirestoreProduct(
             id: UUID().uuidString,
             sellerId: sellerId,
@@ -24,10 +31,11 @@ class MarketplaceService: ObservableObject {
             description: description,
             price: price,
             condition: condition,
-            imageURL: "https://via.placeholder.com/300", // Placeholder for actual image upload
+            imageURL: finalImageURL,
             latitude: lat,
             longitude: lon,
             locationName: locationName,
+            postalCode: postalCode,
             createdAt: Date()
         )
         try db.collection("products").document(product.id ?? UUID().uuidString).setData(from: product)
