@@ -1,11 +1,12 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @ObservedObject var sessionStore: SessionStore
     var body: some View {
         NavigationStack {
             List {
                 NavigationLink("Marketplace") {
-                    MarketplaceView()
+                    MarketplaceView(sessionStore: sessionStore)
                 }
                 NavigationLink("Mini Games") {
                     MiniGamesView()
@@ -17,5 +18,5 @@ struct SettingsView: View {
 }
 
 #Preview {
-    SettingsView()
+    SettingsView(sessionStore: SessionStore())
 }

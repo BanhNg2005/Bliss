@@ -12,7 +12,8 @@ struct FirestoreProduct: Codable, Identifiable {
     var imageURL: String
     var latitude: Double
     var longitude: Double
-    var locationName: String
+    var locationName: String // Keep for backwards compatibility
+    var postalCode: String? // Optional for backwards compatibility
     var createdAt: Date
 
     var coordinate: CLLocationCoordinate2D {
