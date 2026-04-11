@@ -1,16 +1,36 @@
 import SwiftUI
-import CoreData
 
 struct PostCardView: View {
-    let post: Post
+    let post: FirestorePost
+    let currentUserId: String
+    let postService: PostService
+
+    @State private var navigateToProfile = false
+    @State private var authorUsername: String = ""
+
+    private var isLiked: Bool {
+        post.likedBy.contains(currentUserId)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
 
-            // MARK: - Header
+            // MARK: - Header (tappable author)
             HStack {
-                Text("@\(post.wrappedAuthorId)")
-                    .font(.subheadline.weight(.semibold))
+                Button {
+                    navigateToProfile = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundStyle(.gray.opacity(0.5))
+
+                        Text(authorUsername.isEmpty ? "Loading..." : "@\(authorUsername)")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                    }
+                }
+                .buttonStyle(.plain)
 
                 Spacer()
 
@@ -23,48 +43,65 @@ struct PostCardView: View {
             mediaView
 
             // MARK: - Caption
-            if !post.wrappedCaption.isEmpty {
-                Text(post.wrappedCaption)
+            if !post.caption.isEmpty {
+                Text(post.caption)
                     .font(.body)
             }
 
             // MARK: - Footer
             HStack(spacing: 12) {
-                Image(systemName: post.isLiked ? "heart.fill" : "heart")
-                    .foregroundStyle(post.isLiked ? .pink : .secondary)
+                Button {
+                    postService.toggleLike(post: post, userId: currentUserId)
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: isLiked ? "heart.fill" : "heart")
+                            .foregroundStyle(isLiked ? .pink : .secondary)
+                            .contentTransition(.symbolEffect(.replace))
 
-                Text("\(post.likeCount) likes")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                        Text("\(post.likeCount) likes")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .buttonStyle(.plain)
 
                 Spacer()
 
-                Text(post.wrappedCreatedAt, style: .time)
+                Text(post.createdAt, style: .time)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
         .padding(16)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20))
+        .navigationDestination(isPresented: $navigateToProfile) {
+            UserProfileView(
+                userId: post.authorId,
+                currentUserId: currentUserId
+            )
+        }
+        .task {
+            guard !post.authorId.isEmpty else { return }
+            if let user = try? await UserService().fetchUser(userId: post.authorId) {
+                authorUsername = user.username
+            }
+        }
     }
 
     // MARK: - Media view
 
     @ViewBuilder
     private var mediaView: some View {
-        let urlString = post.wrappedMediaURL
-
-        if urlString.isEmpty {
-            // No media attached
+        if post.mediaURL.isEmpty {
             emptyMediaPlaceholder
-        } else if let url = URL(string: urlString) {
+        } else if let url = URL(string: post.mediaURL) {
             AsyncImage(url: url) { phase in
                 switch phase {
                 case .empty:
-                    // Loading
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(.gray.opacity(0.15))
+                            .frame(maxWidth: .infinity)
                             .frame(height: 280)
                         ProgressView()
                     }
@@ -72,16 +109,15 @@ struct PostCardView: View {
                 case .success(let image):
                     image
                         .resizable()
-                        .scaledToFill()
+                        .scaledToFit()           // scaledToFit keeps image within bounds
                         .frame(maxWidth: .infinity)
-                        .frame(height: 280)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
 
                 case .failure:
-                    // Failed to load
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(.gray.opacity(0.15))
+                            .frame(maxWidth: .infinity)
                             .frame(height: 280)
                         VStack(spacing: 8) {
                             Image(systemName: "photo.slash")
@@ -105,6 +141,7 @@ struct PostCardView: View {
     private var emptyMediaPlaceholder: some View {
         RoundedRectangle(cornerRadius: 16)
             .fill(.gray.opacity(0.15))
+            .frame(maxWidth: .infinity)
             .frame(height: 220)
             .overlay(
                 Text("No media")
@@ -112,21 +149,4 @@ struct PostCardView: View {
                     .font(.footnote)
             )
     }
-}
-
-#Preview {
-    let context = PersistenceController.preview.container.viewContext
-    let post = Post(context: context)
-    post.authorId  = "user_1234"
-    post.caption   = "A quiet morning in the city."
-    post.createdAt = Date()
-    post.lastUpdated = Date()
-    post.postId    = UUID().uuidString
-    post.mediaType = MediaType.image.rawValue
-    post.mediaURL  = "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800"
-    post.isLiked   = true
-    post.likeCount = 128
-
-    return PostCardView(post: post)
-        .padding()
 }

@@ -1,6 +1,5 @@
 import SwiftUI
 import FirebaseFirestore
-import CoreData
 
 struct UserProfileView: View {
     let userId: String
@@ -13,18 +12,8 @@ struct UserProfileView: View {
     @State private var isLoadingUser = true
     @State private var isFollowLoading = false
 
-    @FetchRequest private var theirPosts: FetchedResults<Post>
-
-    init(userId: String, currentUserId: String) {
-        self.userId = userId
-        self.currentUserId = currentUserId
-
-        let predicate = NSPredicate(format: "authorId == %@", userId)
-        _theirPosts = FetchRequest(
-            sortDescriptors: [NSSortDescriptor(keyPath: \Post.createdAt, ascending: false)],
-            predicate: predicate,
-            animation: .default
-        )
+    private var theirPosts: [FirestorePost] {
+        postService.posts.filter { $0.authorId == userId }
     }
 
     private var isFollowing: Bool {
@@ -66,14 +55,12 @@ struct UserProfileView: View {
                 ))
 
             if isLoadingUser {
-                ProgressView()
-                    .frame(height: 28)
+                ProgressView().frame(height: 28)
             } else {
                 VStack(spacing: 4) {
                     Text("@\(user?.username ?? "unknown")")
                         .font(.title2.weight(.semibold))
 
-                    // Online indicator
                     HStack(spacing: 6) {
                         Circle()
                             .fill(user?.isOnline == true ? Color.green : Color.gray)
@@ -85,7 +72,6 @@ struct UserProfileView: View {
                 }
             }
 
-            // Stats row
             HStack(spacing: 32) {
                 statItem(title: "Posts",     value: "\(theirPosts.count)")
                 statItem(title: "Followers", value: "\(followService.followers.count)")
@@ -93,7 +79,6 @@ struct UserProfileView: View {
             }
             .padding(.top, 4)
 
-            // Follow button (only show if viewing someone else's profile)
             if userId != currentUserId {
                 followButton
             }
@@ -108,7 +93,6 @@ struct UserProfileView: View {
                 currentUserId: currentUserId,
                 targetUserId: userId
             )
-            // Small delay to let Firestore listener update
             Task {
                 try? await Task.sleep(nanoseconds: 500_000_000)
                 isFollowLoading = false
@@ -147,7 +131,11 @@ struct UserProfileView: View {
         } else {
             LazyVStack(spacing: 20) {
                 ForEach(theirPosts) { post in
-                    PostCardView(post: post)
+                    PostCardView(
+                        post: post,
+                        currentUserId: currentUserId,
+                        postService: postService
+                    )
                 }
             }
             .padding(.horizontal, 16)
@@ -156,19 +144,15 @@ struct UserProfileView: View {
 
     private func statItem(title: String, value: String) -> some View {
         VStack(spacing: 4) {
-            Text(value)
-                .font(.headline)
-            Text(title)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            Text(value).font(.headline)
+            Text(title).font(.subheadline).foregroundStyle(.secondary)
         }
     }
-
-    // MARK: - Fetch
 
     private func fetchUser() {
         isLoadingUser = true
         Task {
+            guard !userId.isEmpty else { isLoadingUser = false; return }
             user = try? await UserService().fetchUser(userId: userId)
             isLoadingUser = false
         }
