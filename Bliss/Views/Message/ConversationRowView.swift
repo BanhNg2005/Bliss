@@ -21,10 +21,10 @@ struct ConversationRowView: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(conversation.otherUsername.isEmpty ? "User" : conversation.otherUsername)
+                Text(conversation.displayTitle)
                     .font(.subheadline.weight(.semibold))
 
-                Text(conversation.lastMessageText.isEmpty ? "No messages yet" : conversation.lastMessageText)
+                Text(conversation.displayPreview)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)

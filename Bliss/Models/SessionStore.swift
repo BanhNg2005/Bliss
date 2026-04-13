@@ -23,8 +23,8 @@ final class SessionStore: ObservableObject {
     func startSession(with user: FirestoreUser) {
         let token = UUID().uuidString
         UserDefaults.standard.set(token, forKey: tokenKey)
-        UserDefaults.standard.set(userId, forKey: userIdKey)
-        UserDefaults.standard.set(username, forKey: usernameKey)
+        UserDefaults.standard.set(user.userId, forKey: userIdKey)
+        UserDefaults.standard.set(user.username, forKey: usernameKey)
         UserService().updateUserOnlineStatus(userId: user.userId, isOnline: true)
         sessionToken = token
         self.userId = user.userId

@@ -5,28 +5,60 @@ struct MiniGamesView: View {
         VStack(spacing: 12) {
             Image(systemName: "gamecontroller.fill")
                 .font(.system(size: 36))
+                .foregroundColor(.blue)
+                .padding(.top, 10)
             Text("Mini Games")
                 .font(.title2.weight(.semibold))
-            // put a list of games here, have a AirHockey already
+            
             List {
                 NavigationLink(destination: AirHockey()) {
-                    Text("Air Hockey")
+                    HStack(spacing: 16) {
+                        Image(systemName: "hockey.puck.fill")
+                            .font(.title2)
+                            .foregroundColor(.blue)
+                        Text("Air Hockey")
+                            .font(.headline)
+                    }
                 }
+                .padding(.vertical, 8)
+                
                 NavigationLink(destination: SpaceInvader()) {
-                    Text("Space Invader")
+                    HStack(spacing: 16) {
+                        Image(systemName: "airplane")
+                            .font(.title2)
+                            .foregroundColor(.red)
+                        Text("Space Invader")
+                            .font(.headline)
+                    }
                 }
+                .padding(.vertical, 8)
+                
                 NavigationLink(destination: TicTacToe()) {
-                    Text("Tic Tac Toe")
+                    HStack(spacing: 16) {
+                        Image(systemName: "number.square")
+                            .font(.title2)
+                            .foregroundColor(.green)
+                        Text("Tic Tac Toe")
+                            .font(.headline)
+                    }
                 }
+                .padding(.vertical, 8)
+                
                 NavigationLink(destination: ConnectFour()) {
-                    Text("Connect 4")
+                    HStack(spacing: 16) {
+                        Image(systemName: "circle.grid.cross")
+                            .font(.title2)
+                            .foregroundColor(.orange)
+                        Text("Connect 4")
+                            .font(.headline)
+                    }
                 }
-                .listRowInsets(EdgeInsets())
                 .padding(.vertical, 8)
             }
+            .listStyle(InsetGroupedListStyle())
         }
-        .padding(24)
         .navigationTitle("Mini Games")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

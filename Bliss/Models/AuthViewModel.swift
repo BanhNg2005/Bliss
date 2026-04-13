@@ -119,18 +119,29 @@ final class AuthViewModel: ObservableObject {
             )
             Task {
                 try? await UserService().createUser(user)
+                await MainActor.run {
+                    sessionStore.startSession(with: user)
+                    self.resetFields()
+                }
+            }
+        } else {
+            Task {
+                do {
+                    let user = try await UserService().fetchUser(userId: userId)
+                    await MainActor.run {
+                        sessionStore.startSession(with: user)
+                        self.resetFields()
+                    }
+                } catch {
+                    await MainActor.run {
+                        self.errorMessage = "Failed to load user profile."
+                    }
+                }
             }
         }
-
-        sessionStore.startSession(with: FirestoreUser(
-            userId: userId,
-            username: username.trimmingCharacters(in: .whitespacesAndNewlines),
-            email: emailOrUsername.trimmingCharacters(in: .whitespacesAndNewlines),
-            avatarURL: "",
-            createdAt: Date(),
-            isOnline: true,
-            lastSeen: Date()
-        ))
+    }
+    
+    private func resetFields() {
         emailOrUsername = ""
         username = ""
         password = ""

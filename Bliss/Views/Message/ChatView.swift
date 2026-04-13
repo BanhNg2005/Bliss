@@ -50,7 +50,7 @@ struct ChatView: View {
                         }
                     }
                 }
-                .onChange(of: service.messages.count) { _ in
+                .onChange(of: service.messages.count) { _, _ in
                     withAnimation {
                         if let last = service.messages.last {
                             proxy.scrollTo(last.id, anchor: .bottom)
@@ -82,7 +82,7 @@ struct ChatView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
         }
-        .navigationTitle(conversation.otherUsername.isEmpty ? "Chat" : conversation.otherUsername)
+        .navigationTitle(conversation.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             // ← ADD THIS: phone button in the top-right

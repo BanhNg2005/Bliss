@@ -67,15 +67,14 @@ struct MapPinPickerView: View {
 }
 
 struct CreateListingView: View {
-    @ObservedObject var service: MarketplaceService
     @Environment(\.dismiss) var dismiss
-    
-    @StateObject private var locationManager = MarketplaceLocationManager()
+    @ObservedObject var service: MarketplaceService
+    @ObservedObject var sessionStore: SessionStore
     
     @State private var title = ""
+    @State private var descriptionText = ""
     @State private var priceString = ""
     @State private var condition = "New"
-    @State private var descriptionText = ""
     
     // Location Data
     @State private var postalCode = ""
@@ -88,6 +87,8 @@ struct CreateListingView: View {
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var selectedImageData: Data? = nil
     @State private var selectedUIImage: UIImage? = nil
+    
+    @StateObject private var locationManager = MarketplaceLocationManager()
     
     @State private var isSubmitting = false
     @State private var showError = false
@@ -184,6 +185,7 @@ struct CreateListingView: View {
                                 .font(.headline)
                             Spacer()
                             Button("Use Current Location") {
+//                                locationManager.requestLocation()
                                 locationManager.requestLocation()
                             }
                             .font(.subheadline)
@@ -248,7 +250,7 @@ struct CreateListingView: View {
             .sheet(isPresented: $showMapPicker) {
                 MapPinPickerView(lat: $latitude, lon: $longitude, postal: $postalCode, city: $city)
             }
-            .onChange(of: locationManager.location) { oldValue, newLocation in
+            .onReceive(locationManager.$location) { newLocation in
                 if let loc = newLocation {
                     self.latitude = loc.coordinate.latitude
                     self.longitude = loc.coordinate.longitude
@@ -274,7 +276,7 @@ struct CreateListingView: View {
         isSubmitting = true
         Task {
             do {
-                let sessionUserId = UserDefaults.standard.string(forKey: "sessionUserId") ?? "current_user_id"
+                let sessionUserId = sessionStore.userId
                 let finalLocationName = "\(city.isEmpty ? "" : city + " ")\(postalCode)"
                 
                 try await service.createProduct(

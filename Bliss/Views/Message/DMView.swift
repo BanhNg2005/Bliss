@@ -7,6 +7,14 @@ struct DMView: View {
     @StateObject private var callService = CallService.shared
     @State private var showNewConversation = false
 
+    private var marketplaceConversations: [FirestoreConversation] {
+        service.conversations.filter { $0.conversationType == .marketplace }
+    }
+
+    private var directConversations: [FirestoreConversation] {
+        service.conversations.filter { $0.conversationType != .marketplace }
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -24,19 +32,40 @@ struct DMView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List {
-                        Section(header: Text("Chats")) {
-                            ForEach(service.conversations) { conversation in
-                                NavigationLink {
-                                    ChatView(
-                                        conversation: conversation,
-                                        sessionStore: sessionStore,
-                                        callService:  CallService.shared 
-                                    )
-                                } label: {
-                                    ConversationRowView(
-                                        conversation: conversation,
-                                        currentUserId: sessionStore.userId
-                                    )
+                        if !marketplaceConversations.isEmpty {
+                            Section(header: Text("Marketplace")) {
+                                ForEach(marketplaceConversations) { conversation in
+                                    NavigationLink {
+                                        ChatView(
+                                            conversation: conversation,
+                                            sessionStore: sessionStore,
+                                            callService: CallService.shared
+                                        )
+                                    } label: {
+                                        ConversationRowView(
+                                            conversation: conversation,
+                                            currentUserId: sessionStore.userId
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        if !directConversations.isEmpty {
+                            Section(header: Text("Chats")) {
+                                ForEach(directConversations) { conversation in
+                                    NavigationLink {
+                                        ChatView(
+                                            conversation: conversation,
+                                            sessionStore: sessionStore,
+                                            callService: CallService.shared
+                                        )
+                                    } label: {
+                                        ConversationRowView(
+                                            conversation: conversation,
+                                            currentUserId: sessionStore.userId
+                                        )
+                                    }
                                 }
                             }
                         }

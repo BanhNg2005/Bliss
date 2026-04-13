@@ -31,12 +31,8 @@ final class ConversationService: ObservableObject {
                     return
                 }
 
-                print("\(snapshot?.documents.count ?? 0) conversations")
-                snapshot?.documents.forEach { print("  - \($0.documentID)") }
-
                 guard let docs = snapshot?.documents else { return }
                 let raw = docs.compactMap { try? $0.data(as: FirestoreConversation.self) }
-                print("\(raw.count) conversations")
 
                 Task {
                     var enriched: [FirestoreConversation] = []
@@ -48,6 +44,11 @@ final class ConversationService: ObservableObject {
                             conv.otherAvatarURL = otherUser.avatarURL
                             conv.isOtherOnline = otherUser.isOnline
                         }
+
+                        if conv.conversationType == .marketplace, conv.sellerUsername?.isEmpty ?? true {
+                            conv.sellerUsername = conv.otherUsername.isEmpty ? conv.sellerUsername : conv.otherUsername
+                        }
+
                         enriched.append(conv)
                     }
                     await MainActor.run {
@@ -58,7 +59,18 @@ final class ConversationService: ObservableObject {
     }
 
     func createConversation(between currentUserId: String, and otherUserId: String) async throws -> String {
-        // Check if conversation already exists
+        try await createConversation(between: currentUserId, and: otherUserId, productId: nil, productTitle: nil, sellerUsername: nil)
+    }
+
+    func createConversation(
+        between currentUserId: String,
+        and otherUserId: String,
+        productId: String?,
+        productTitle: String?,
+        sellerUsername: String?
+    ) async throws -> String {
+        let isMarketplace = productId != nil
+
         let existing = try await db.collection("conversations")
             .whereField("participantIds", arrayContains: currentUserId)
             .getDocuments()
@@ -66,18 +78,37 @@ final class ConversationService: ObservableObject {
         for doc in existing.documents {
             if let conv = try? doc.data(as: FirestoreConversation.self),
                conv.participantIds.contains(otherUserId) {
-                return conv.conversationId
+                if isMarketplace {
+                    if conv.conversationType == .marketplace, conv.productId == productId {
+                        return conv.conversationId
+                    }
+                } else if conv.conversationType != .marketplace {
+                    return conv.conversationId
+                }
             }
         }
 
-        // Create new
         let convId = UUID().uuidString
-        try await db.collection("conversations").document(convId).setData([
+        var data: [String: Any] = [
             "conversationId": convId,
             "participantIds": [currentUserId, otherUserId],
             "lastMessageText": "",
             "lastMessageAt": Date()
-        ])
+        ]
+
+        if isMarketplace {
+            data["conversationType"] = FirestoreConversation.ConversationType.marketplace.rawValue
+            data["productId"] = productId ?? NSNull()
+            data["productTitle"] = productTitle ?? NSNull()
+            data["sellerId"] = otherUserId
+            if let sellerUsername {
+                data["sellerUsername"] = sellerUsername
+            }
+        } else {
+            data["conversationType"] = FirestoreConversation.ConversationType.direct.rawValue
+        }
+
+        try await db.collection("conversations").document(convId).setData(data)
         return convId
     }
 
@@ -118,7 +149,6 @@ final class ConversationService: ObservableObject {
             .document(msgId)
             .setData(from: message)
 
-        // Update conversation preview
         try await db.collection("conversations").document(conversationId).updateData([
             "lastMessageText": text,
             "lastMessageAt": Date()

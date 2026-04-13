@@ -30,7 +30,7 @@ struct RootTabView: View {
                     Label("Profile", systemImage: "person.crop.circle")
                 }
 
-            SettingsView(sessionStore: SessionStore())
+            SettingsView(sessionStore: sessionStore)
                 .tabItem {
                     Label("Settings", systemImage: "gearshape.fill")
                 }

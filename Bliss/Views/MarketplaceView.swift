@@ -59,6 +59,12 @@ struct MarketplaceView: View {
                 TextField("Search products...", text: $searchText)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                 
+                NavigationLink(destination: MarketplaceProfileView(sessionStore: sessionStore, service: service, userLocation: userLocation)) {
+                    Image(systemName: "person.crop.circle")
+                        .font(.title2)
+                        .foregroundColor(.primary)
+                }
+                
                 Menu {
                     Picker("Sort By", selection: $sortType) {
                         ForEach(SortType.allCases, id: \.self) { type in
@@ -100,7 +106,7 @@ struct MarketplaceView: View {
             .padding()
         }
         .sheet(isPresented: $showCreateListing) {
-            CreateListingView(service: service)
+            CreateListingView(service: service, sessionStore: sessionStore)
         }
     }
 }
