@@ -8,6 +8,7 @@ struct ProfileView: View {
 
     @State private var currentUser: FirestoreUser?
     @State private var isLoadingUser = true
+    @State private var avatarURL: String?
     @State private var showFollowers = false
     @State private var showFollowing = false
 
@@ -74,13 +75,11 @@ struct ProfileView: View {
 
     private var profileHeader: some View {
         VStack(spacing: 12) {
-            Image(systemName: "person.crop.circle.fill")
-                .font(.system(size: 84))
-                .foregroundStyle(.linearGradient(
-                    colors: [.purple, .pink],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
+            // Tappable avatar with camera badge
+            AvatarPickerView(
+                userId: sessionStore.userId,
+                avatarURL: $avatarURL
+            )
 
             if isLoadingUser {
                 ProgressView().frame(height: 28)
@@ -97,6 +96,7 @@ struct ProfileView: View {
                 }
             }
 
+            // Stats row
             HStack(spacing: 32) {
                 statItem(title: "Posts", value: "\(myPosts.count)")
 
@@ -134,7 +134,10 @@ struct ProfileView: View {
     private func fetchCurrentUser() {
         isLoadingUser = true
         Task {
-            currentUser = try? await UserService().fetchUser(userId: sessionStore.userId)
+            if let user = try? await UserService().fetchUser(userId: sessionStore.userId) {
+                currentUser = user
+                avatarURL = user.avatarURL.isEmpty ? nil : user.avatarURL
+            }
             isLoadingUser = false
         }
     }
@@ -170,9 +173,26 @@ struct FollowListView: View {
                             )
                         } label: {
                             HStack(spacing: 12) {
-                                Image(systemName: "person.crop.circle.fill")
-                                    .font(.system(size: 36))
-                                    .foregroundStyle(.gray.opacity(0.4))
+                                // Show their avatar if available
+                                Group {
+                                    if let url = URL(string: user.avatarURL), !user.avatarURL.isEmpty {
+                                        AsyncImage(url: url) { phase in
+                                            if case .success(let image) = phase {
+                                                image.resizable().scaledToFill()
+                                            } else {
+                                                Image(systemName: "person.crop.circle.fill")
+                                                    .font(.system(size: 36))
+                                                    .foregroundStyle(.gray.opacity(0.4))
+                                            }
+                                        }
+                                        .frame(width: 40, height: 40)
+                                        .clipShape(Circle())
+                                    } else {
+                                        Image(systemName: "person.crop.circle.fill")
+                                            .font(.system(size: 36))
+                                            .foregroundStyle(.gray.opacity(0.4))
+                                    }
+                                }
 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("@\(user.username)")
