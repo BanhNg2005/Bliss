@@ -46,13 +46,25 @@ struct UserProfileView: View {
 
     private var profileHeader: some View {
         VStack(spacing: 12) {
-            Image(systemName: "person.crop.circle.fill")
-                .font(.system(size: 84))
-                .foregroundStyle(.linearGradient(
-                    colors: [.blue, .teal],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
+            // Avatar
+            Group {
+                if let avatarURL = user?.avatarURL,
+                   !avatarURL.isEmpty,
+                   let url = URL(string: avatarURL) {
+                    AsyncImage(url: url) { phase in
+                        if case .success(let image) = phase {
+                            image.resizable().scaledToFill()
+                        } else {
+                            gradientAvatar
+                        }
+                    }
+                } else {
+                    gradientAvatar
+                }
+            }
+            .frame(width: 96, height: 96)
+            .clipShape(Circle())
+            .overlay(Circle().stroke(Color(.systemBackground), lineWidth: 3))
 
             if isLoadingUser {
                 ProgressView().frame(height: 28)
@@ -84,6 +96,19 @@ struct UserProfileView: View {
             }
         }
         .padding(.horizontal, 16)
+    }
+
+    private var gradientAvatar: some View {
+        ZStack {
+            LinearGradient(
+                colors: [.blue, .teal],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            Image(systemName: "person.fill")
+                .font(.system(size: 40))
+                .foregroundStyle(.white.opacity(0.8))
+        }
     }
 
     private var followButton: some View {
@@ -122,10 +147,8 @@ struct UserProfileView: View {
     private var postGrid: some View {
         if theirPosts.isEmpty {
             VStack(spacing: 8) {
-                Text("No posts yet")
-                    .font(.headline)
-                Text("Nothing to show here.")
-                    .foregroundStyle(.secondary)
+                Text("No posts yet").font(.headline)
+                Text("Nothing to show here.").foregroundStyle(.secondary)
             }
             .padding(.top, 24)
         } else {
